@@ -5,9 +5,9 @@ import subprocess
 from text_to_speech import TextToSpeech, ConvertirVideo
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'uploads/'
+app.config['UPLOAD_FOLDER'] = 'input/'
 app.config['OUTPUT_FOLDER'] = 'output/'
-app.config['VIDEO_FOLDER'] = 'E:/PODCAST_2PY3.10.11/input/BG_VIDEO/'
+app.config['VIDEO_PATH'] = 'E:/PODCAST_2PY3.10.11/input/Spectrum.mp4'
 
 def clean_output_folder():
     folder = app.config['OUTPUT_FOLDER']
@@ -48,7 +48,7 @@ def upload_file():
             output_video_path = os.path.join(app.config['OUTPUT_FOLDER'], output_video_filename)
             srt_file_path = os.path.join(app.config['OUTPUT_FOLDER'], 'output_video.srt')
 
-            convertir_video = ConvertirVideo(audio_file_path, output_video_path, app.config['VIDEO_FOLDER'])
+            convertir_video = ConvertirVideo(audio_file_path, output_video_path, app.config['VIDEO_PATH'])
             convertir_video.attach_audio_to_video()
 
             tts.create_srt_word_by_word(audio_file_path, srt_file_path)

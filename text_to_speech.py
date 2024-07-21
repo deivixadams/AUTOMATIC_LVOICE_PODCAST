@@ -81,50 +81,22 @@ class TextToSpeech:
         return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
 class ConvertirVideo:
-    def __init__(self, audio_file_path, output_file_path, video_folder):
+    def __init__(self, audio_file_path, output_file_path, video_path):
         self.audio_file_path = audio_file_path
-        self.video_folder = video_folder
+        self.video_path = video_path
         self.output_file_path = output_file_path
 
     def attach_audio_to_video(self):
-        if not os.path.isdir(self.video_folder):
-            print(f"La carpeta de videos {self.video_folder} no existe.")
+        if not os.path.isfile(self.video_path):
+            print(f"El archivo de video {self.video_path} no existe.")
             return
 
         if not os.path.isfile(self.audio_file_path):
             print(f"El archivo de audio {self.audio_file_path} no existe.")
             return
 
-        video_clips = self.get_video_clips()
-        if not video_clips:
-            print(f"No se encontraron videos en la carpeta {self.video_folder}.")
-            return
-
-        combined_video = self.combine_videos(video_clips)
+        video = VideoFileClip(self.video_path)
         audio = AudioFileClip(self.audio_file_path)
 
-        combined_video = combined_video.set_audio(audio)
-        combined_video.write_videofile(self.output_file_path, codec='libx264', audio_codec='aac')
-
-    def get_video_clips(self):
-        video_files = [os.path.join(self.video_folder, f) for f in os.listdir(self.video_folder) if f.endswith(('.mp4', '.avi', '.mov'))]
-        random.shuffle(video_files)
-        return [VideoFileClip(video_file) for video_file in video_files]
-
-    def combine_videos(self, video_clips):
-        audio = AudioFileClip(self.audio_file_path)
-        audio_duration = audio.duration
-
-        combined_clips = []
-        current_duration = 0
-
-        while current_duration < audio_duration:
-            for clip in video_clips:
-                if current_duration + clip.duration > audio_duration:
-                    clip = clip.subclip(0, audio_duration - current_duration)
-                combined_clips.append(clip)
-                current_duration += clip.duration
-                if current_duration >= audio_duration:
-                    break
-
-        return concatenate_videoclips(combined_clips, method="compose")
+        video = video.set_audio(audio)
+        video.write_videofile(self.output_file_path, codec='libx264', audio_codec='aac')
