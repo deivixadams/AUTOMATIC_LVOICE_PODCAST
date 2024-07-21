@@ -98,5 +98,12 @@ class ConvertirVideo:
         video = VideoFileClip(self.video_path)
         audio = AudioFileClip(self.audio_file_path)
 
-        video = video.set_audio(audio)
-        video.write_videofile(self.output_file_path, codec='libx264', audio_codec='aac')
+        video_clips = []
+        current_duration = 0
+        while current_duration < audio.duration:
+            video_clips.append(video)
+            current_duration += video.duration
+
+        final_video = concatenate_videoclips(video_clips).set_duration(audio.duration)
+        final_video = final_video.set_audio(audio)
+        final_video.write_videofile(self.output_file_path, codec='libx264', audio_codec='aac')
