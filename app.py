@@ -44,14 +44,17 @@ def upload_file():
         text = tts.read_text()
         if text:
             audio_file_path = tts.convert_to_speech(text)
+            l_voice_audio_path = os.path.join(app.config['OUTPUT_FOLDER'], 'output_audio_l_voice.wav')
+            tts.apply_l_voice_effect(audio_file_path, l_voice_audio_path)
+
             output_video_filename = 'output_video.mp4'
             output_video_path = os.path.join(app.config['OUTPUT_FOLDER'], output_video_filename)
             srt_file_path = os.path.join(app.config['OUTPUT_FOLDER'], 'output_video.srt')
 
-            convertir_video = ConvertirVideo(audio_file_path, output_video_path, app.config['VIDEO_PATH'])
+            convertir_video = ConvertirVideo(l_voice_audio_path, output_video_path, app.config['VIDEO_PATH'])
             convertir_video.attach_audio_to_video()
 
-            tts.create_srt_word_by_word(audio_file_path, srt_file_path)
+            tts.create_srt_word_by_word(l_voice_audio_path, srt_file_path)
 
             # Abrir el archivo de video con VLC al finalizar
             subprocess.run(["vlc", output_video_path])

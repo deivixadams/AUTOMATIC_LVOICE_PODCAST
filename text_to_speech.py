@@ -1,7 +1,9 @@
 import pyttsx3
 import whisper
 import os
-import random
+import numpy as np
+import librosa
+import soundfile as sf
 from datetime import timedelta
 from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips
 
@@ -47,6 +49,23 @@ class TextToSpeech:
         
         return self.audio_file_path
 
+    def apply_l_voice_effect(self, input_audio_path, output_audio_path):
+        audio, sr = librosa.load(input_audio_path, sr=None)
+
+        pitch_shift_factors = [3, -2]
+        mixed_audio = np.zeros_like(audio)
+
+        for i, pitch_shift_factor in enumerate(pitch_shift_factors):
+            pitch_shifted_audio = librosa.effects.pitch_shift(audio, sr=sr, n_steps=pitch_shift_factor, bins_per_octave=12)
+            original_duration = len(audio) / sr
+            pitch_shifted_duration = len(pitch_shifted_audio) / sr
+            stretch_factor = pitch_shifted_duration / original_duration
+            stretched_audio = librosa.effects.time_stretch(pitch_shifted_audio, rate=stretch_factor)
+            mixed_audio[:len(stretched_audio)] += stretched_audio
+
+        mixed_audio[:len(audio)] += audio
+        sf.write(output_audio_path, mixed_audio, sr, format='wav')
+
     def create_srt_word_by_word(self, audio_file_path, srt_file_path):
         result = self.whisper_model.transcribe(audio_file_path)
         with open(srt_file_path, "w", encoding="utf-8") as srt_file:
@@ -65,10 +84,7 @@ class TextToSpeech:
     def calculate_word_durations(self, start, end, words):
         total_words = len(words)
         total_duration = end - start
-        adjustment_factor = 0.955  # Ajustar este valor según sea necesario (menor a 1 para adelantar)
-        """
-        Si aumentas el adjustment_factor: La duración de cada palabra aumenta. Si disminuyes el adjustment_factor: La duración de cada palabra disminuye.
-        """
+        adjustment_factor = 0.955
         word_duration = (total_duration / total_words) * adjustment_factor
         word_times = [(start + i * word_duration, start + (i + 1) * word_duration) for i in range(total_words)]
         return word_times
