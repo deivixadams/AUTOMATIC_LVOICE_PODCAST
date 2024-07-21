@@ -1,0 +1,130 @@
+import pyttsx3
+import whisper
+import os
+import random
+from datetime import timedelta
+from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips
+
+class TextToSpeech:
+    def __init__(self, text_file_path):
+        self.text_file_path = text_file_path
+        self.audio_file_path = "output/output_audio.wav"
+        os.makedirs(os.path.dirname(self.audio_file_path), exist_ok=True)
+        self.engine = pyttsx3.init()
+        self.set_spanish_voice()
+        self.whisper_model = whisper.load_model("base")
+
+    def set_spanish_voice(self):
+        voices = self.engine.getProperty('voices')
+        for voice in voices:
+            if 'spanish' in voice.name.lower():
+                self.engine.setProperty('voice', voice.id)
+                break
+        else:
+            print("No se encontró una voz en español. Asegúrate de tener una voz en español instalada.")
+
+    def read_text(self):
+        if not os.path.isfile(self.text_file_path):
+            print(f"El archivo {self.text_file_path} no existe.")
+            return None
+
+        with open(self.text_file_path, "r", encoding="utf-8") as file:
+            text = file.read().strip()
+
+        if not text:
+            print("El archivo de texto está vacío.")
+            return None
+
+        return text
+
+    def convert_to_speech(self, text):
+        self.engine.save_to_file(text, self.audio_file_path)
+        self.engine.runAndWait()
+        
+        # Check if the audio file is created
+        if not os.path.exists(self.audio_file_path):
+            raise FileNotFoundError(f"No se pudo crear el archivo de audio en {self.audio_file_path}")
+        
+        return self.audio_file_path
+
+    def create_srt_word_by_word(self, audio_file_path, srt_file_path):
+        result = self.whisper_model.transcribe(audio_file_path)
+        with open(srt_file_path, "w", encoding="utf-8") as srt_file:
+            index = 0
+            for segment in result["segments"]:
+                words = segment["text"].split()
+                start = segment["start"]
+                end = segment["end"]
+                word_durations = self.calculate_word_durations(start, end, words)
+                for word, (word_start, word_end) in zip(words, word_durations):
+                    index += 1
+                    srt_file.write(f"{index}\n")
+                    srt_file.write(f"{self.format_time(word_start)} --> {self.format_time(word_end)}\n")
+                    srt_file.write(f"{word}\n\n")
+
+    def calculate_word_durations(self, start, end, words):
+        total_words = len(words)
+        total_duration = end - start
+        adjustment_factor = 0.955  # Ajustar este valor según sea necesario (menor a 1 para adelantar)
+        """
+        Si aumentas el adjustment_factor: La duración de cada palabra aumenta. Si disminuyes el adjustment_factor: La duración de cada palabra disminuye.
+        """
+        word_duration = (total_duration / total_words) * adjustment_factor
+        word_times = [(start + i * word_duration, start + (i + 1) * word_duration) for i in range(total_words)]
+        return word_times
+
+    def format_time(self, seconds):
+        td = timedelta(seconds=seconds)
+        hours, remainder = divmod(td.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        milliseconds = td.microseconds // 1000
+        return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
+class ConvertirVideo:
+    def __init__(self, audio_file_path, output_file_path, video_folder):
+        self.audio_file_path = audio_file_path
+        self.video_folder = video_folder
+        self.output_file_path = output_file_path
+
+    def attach_audio_to_video(self):
+        if not os.path.isdir(self.video_folder):
+            print(f"La carpeta de videos {self.video_folder} no existe.")
+            return
+
+        if not os.path.isfile(self.audio_file_path):
+            print(f"El archivo de audio {self.audio_file_path} no existe.")
+            return
+
+        video_clips = self.get_video_clips()
+        if not video_clips:
+            print(f"No se encontraron videos en la carpeta {self.video_folder}.")
+            return
+
+        combined_video = self.combine_videos(video_clips)
+        audio = AudioFileClip(self.audio_file_path)
+
+        combined_video = combined_video.set_audio(audio)
+        combined_video.write_videofile(self.output_file_path, codec='libx264', audio_codec='aac')
+
+    def get_video_clips(self):
+        video_files = [os.path.join(self.video_folder, f) for f in os.listdir(self.video_folder) if f.endswith(('.mp4', '.avi', '.mov'))]
+        random.shuffle(video_files)
+        return [VideoFileClip(video_file) for video_file in video_files]
+
+    def combine_videos(self, video_clips):
+        audio = AudioFileClip(self.audio_file_path)
+        audio_duration = audio.duration
+
+        combined_clips = []
+        current_duration = 0
+
+        while current_duration < audio_duration:
+            for clip in video_clips:
+                if current_duration + clip.duration > audio_duration:
+                    clip = clip.subclip(0, audio_duration - current_duration)
+                combined_clips.append(clip)
+                current_duration += clip.duration
+                if current_duration >= audio_duration:
+                    break
+
+        return concatenate_videoclips(combined_clips, method="compose")

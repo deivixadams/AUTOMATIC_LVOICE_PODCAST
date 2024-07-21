@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Files</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Download your files</h1>
+        <ul>
+            <li><a href="{{ url_for('download_file', filename='output_video.mp4') }}">Download Video (output_video.mp4)</a></li>
+            <li><a href="{{ url_for('download_file', filename='output_video.srt') }}">Download Subtitles (output_video.srt)</a></li>
+        </ul>
+    </div>
+</body>
+</html>

@@ -1,0 +1,6 @@
+flask
+moviepy
+whisper
+numpy>=1.22
+numba==0.56.4
+aeneas
